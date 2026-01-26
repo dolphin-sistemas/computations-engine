@@ -1,0 +1,83 @@
+{
+  "name": "allocation_distribution",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 2,
+          "fields": {
+            "basePrice": 100.0
+          }
+        },
+        {
+          "id": "item-2",
+          "amount": 3,
+          "fields": {
+            "basePrice": 50.0
+          }
+        }
+      ],
+      "fields": {
+        "totalDiscount": 30.0
+      },
+      "totals": {
+        "subtotal": 350.0
+      }
+    },
+    "rulePack": {
+      "id": "allocation-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "allocation",
+          "rules": [
+            {
+              "id": "allocate-discount",
+              "phase": "allocation",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "items[*].fields.discount",
+                  "logic": {
+                    "/": [
+                      {
+                        "*": [
+                          { "var": ["totalDiscount", 0] },
+                          { "var": ["itemTotal", 0] }
+                        ]
+                      },
+                      { "var": ["totals.subtotal", 0] }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {
+      "items": [
+        {
+          "fields": {
+            "discount": 17.14
+          }
+        },
+        {
+          "fields": {
+            "discount": 12.86
+          }
+        }
+      ]
+    },
+    "rulesVersion": "v1.0.0",
+    "violations": []
+  }
+}

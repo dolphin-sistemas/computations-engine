@@ -1,0 +1,73 @@
+{
+  "name": "guards_validation",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 1,
+          "fields": {
+            "basePrice": 100.0
+          }
+        }
+      ],
+      "fields": {},
+      "totals": {
+        "subtotal": 100.0,
+        "discount": 50.0
+      }
+    },
+    "rulePack": {
+      "id": "guards-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "guards",
+          "rules": [
+            {
+              "id": "validate-max-discount",
+              "phase": "guards",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    ">": [
+                      {
+                        "/": [
+                          { "var": ["totals.discount", 0] },
+                          { "var": ["totals.subtotal", 0] }
+                        ]
+                      },
+                      0.3
+                    ]
+                  },
+                  "params": {
+                    "field": "totals.discount",
+                    "code": "MAX_DISCOUNT_EXCEEDED",
+                    "message": "Discount cannot exceed 30%"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {},
+    "rulesVersion": "v1.0.0",
+    "violations": [
+      {
+        "field": "totals.discount",
+        "code": "MAX_DISCOUNT_EXCEEDED",
+        "message": "Discount cannot exceed 30%"
+      }
+    ]
+  }
+}

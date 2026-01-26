@@ -1,0 +1,63 @@
+{
+  "name": "taxes_calculation",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 1,
+          "fields": {
+            "basePrice": 100.0,
+            "itemTotal": 100.0
+          }
+        }
+      ],
+      "fields": {
+        "taxRate": 0.1
+      },
+      "totals": {
+        "subtotal": 100.0
+      }
+    },
+    "rulePack": {
+      "id": "taxes-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "taxes",
+          "rules": [
+            {
+              "id": "calculate-tax",
+              "phase": "taxes",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "totals.tax",
+                  "logic": {
+                    "*": [
+                      { "var": ["totals.subtotal", 0] },
+                      { "var": ["taxRate", 0] }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {
+      "totals": {
+        "tax": 10.0
+      }
+    },
+    "rulesVersion": "v1.0.0",
+    "violations": []
+  }
+}

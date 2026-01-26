@@ -1,0 +1,85 @@
+{
+  "name": "baseline_initialization",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 1,
+          "fields": {
+            "basePrice": 100.0
+          }
+        }
+      ],
+      "fields": {},
+      "totals": {}
+    },
+    "rulePack": {
+      "id": "baseline-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "baseline",
+          "rules": [
+            {
+              "id": "init-subtotal",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "totals.subtotal",
+                  "logic": {
+                    "sum": [
+                      {
+                        "var": ["itemValues", []]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "init-item-total",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "items[*].fields.itemTotal",
+                  "logic": {
+                    "*": [
+                      { "var": ["basePrice", 0] },
+                      { "var": ["amount", 0] }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {
+      "totals": {
+        "subtotal": 100.0
+      },
+      "items": [
+        {
+          "fields": {
+            "itemTotal": 100.0
+          }
+        }
+      ]
+    },
+    "rulesVersion": "v1.0.0",
+    "violations": []
+  }
+}

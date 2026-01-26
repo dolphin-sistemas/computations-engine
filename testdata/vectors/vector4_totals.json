@@ -1,0 +1,64 @@
+{
+  "name": "totals_complex",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 2,
+          "fields": {
+            "basePrice": 100.0,
+            "itemTotal": 200.0
+          }
+        }
+      ],
+      "fields": {},
+      "totals": {
+        "subtotal": 200.0,
+        "discount": 20.0,
+        "tax": 18.0
+      }
+    },
+    "rulePack": {
+      "id": "totals-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "totals",
+          "rules": [
+            {
+              "id": "calculate-total",
+              "phase": "totals",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "totals.total",
+                  "logic": {
+                    "+": [
+                      { "var": ["totals.subtotal", 0] },
+                      { "var": ["totals.tax", 0] },
+                      { "-": [{ "var": ["totals.discount", 0] }] }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {
+      "totals": {
+        "total": 198.0
+      }
+    },
+    "rulesVersion": "v1.0.0",
+    "violations": []
+  }
+}
