@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // LoadRulePackFromFile carrega um RulePack de um arquivo (JSON ou YAML)

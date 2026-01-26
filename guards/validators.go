@@ -3,28 +3,28 @@ package guards
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/operators"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/operators"
 )
 
 // ValidateMaxRatio valida se uma razão não excede um máximo (genérico)
 func ValidateMaxRatio(state *core.State, numerator, denominator string, maxPercent float64) error {
 	num, ok1 := getNumericValue(state, numerator)
 	den, ok2 := getNumericValue(state, denominator)
-	
+
 	if !ok1 || !ok2 {
 		return fmt.Errorf("cannot validate ratio: fields not found")
 	}
-	
+
 	if den <= 0 {
 		return nil // Não pode calcular razão
 	}
-	
+
 	ratio := (num / den) * 100
 	if ratio > maxPercent {
 		return fmt.Errorf("ratio exceeds maximum of %.2f%%", maxPercent)
 	}
-	
+
 	return nil
 }
 
@@ -71,7 +71,7 @@ func getNumericValue(state *core.State, fieldPath string) (float64, bool) {
 	if fieldPath == "totals.total" {
 		return state.Totals.Total, true
 	}
-	
+
 	// Tentar fields
 	if v, ok := state.Fields[fieldPath]; ok {
 		switch n := v.(type) {
@@ -85,7 +85,7 @@ func getNumericValue(state *core.State, fieldPath string) (float64, bool) {
 			return float64(n), true
 		}
 	}
-	
+
 	return 0, false
 }
 

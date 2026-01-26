@@ -8,10 +8,10 @@ No arquivo `teste-opa-jsonlogic-next/go.mod`:
 
 ```go
 require (
-    github.com/dolphin-sistemas/engine v0.0.0
+    github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
-replace github.com/dolphin-sistemas/engine => ../engine
+replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
 Execute:

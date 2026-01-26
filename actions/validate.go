@@ -3,8 +3,8 @@ package actions
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/operators"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/operators"
 )
 
 // ExecuteValidateAction executa ação "validate": valida condição e cria violação se falsa

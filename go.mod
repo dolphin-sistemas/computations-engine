@@ -1,4 +1,4 @@
-module github.com/dolphin-sistemas/engine
+module github.com/dolphin-sistemas/computations-engine
 
 go 1.24.0
 

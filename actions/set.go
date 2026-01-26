@@ -3,7 +3,7 @@ package actions
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // ExecuteSetAction executa ação "set": define um valor literal em target

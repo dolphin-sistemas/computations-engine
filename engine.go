@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/actions"
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/diff"
-	"github.com/dolphin-sistemas/engine/pipeline"
+	"github.com/dolphin-sistemas/computations-engine/actions"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/diff"
+	"github.com/dolphin-sistemas/computations-engine/pipeline"
 )
 
 // RunEngine é a função principal pública do motor de regras

@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"github.com/diegoholiveira/jsonlogic/v3"
-	"github.com/dolphin-sistemas/engine/pkg"
+	"github.com/dolphin-sistemas/computations-engine/pkg"
 )
 
 func init() {

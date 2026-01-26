@@ -15,10 +15,10 @@ go 1.24.4
 
 require (
     // ... outras dependências
-    github.com/dolphin-sistemas/engine v0.0.0
+    github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
-replace github.com/dolphin-sistemas/engine => ../engine
+replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
 ### 2. Atualizar o Client
@@ -34,8 +34,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // ValidateOrder valida/computa um pedido usando a biblioteca engine
@@ -118,8 +118,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // Adapter adapta a nova biblioteca engine para a interface atual
@@ -277,10 +277,10 @@ Substituir completamente o código antigo pela nova biblioteca:
 
 ```go
 require (
-    github.com/dolphin-sistemas/engine v0.0.0
+    github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
-replace github.com/dolphin-sistemas/engine => ../engine
+replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
 ### 2. Atualizar client.go
@@ -296,8 +296,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 type Client struct {

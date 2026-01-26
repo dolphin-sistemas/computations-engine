@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Substituir `internal/infra/rulesengine/enginecore` pela biblioteca `github.com/dolphin-sistemas/engine`.
+Substituir `internal/infra/rulesengine/enginecore` pela biblioteca `github.com/dolphin-sistemas/computations-engine`.
 
 ## Passos
 
@@ -12,10 +12,10 @@ Adicione no `teste-opa-jsonlogic-next/go.mod`:
 
 ```go
 require (
-    github.com/dolphin-sistemas/engine v0.0.0
+    github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
-replace github.com/dolphin-sistemas/engine => ../engine
+replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
 Execute:
@@ -37,8 +37,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // ValidateOrderResult representa o resultado da validação

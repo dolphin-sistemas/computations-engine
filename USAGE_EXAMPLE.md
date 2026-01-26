@@ -9,10 +9,10 @@ No arquivo `teste-opa-jsonlogic-next/go.mod`:
 ```go
 require (
     // ... outras dependências existentes
-    github.com/dolphin-sistemas/engine v0.0.0
+    github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
-replace github.com/dolphin-sistemas/engine => ../engine
+replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
 Execute:
@@ -34,8 +34,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // Client wraps the engine library

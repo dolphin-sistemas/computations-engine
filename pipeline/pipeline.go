@@ -3,7 +3,7 @@ package pipeline
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // PhaseOrder define a ordem das fases do pipeline

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/loader"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/loader"
 )
 
 func TestRunEngine_Basic(t *testing.T) {
@@ -126,10 +126,10 @@ func TestRunEngine_WithTestVectors(t *testing.T) {
 			}
 
 			var vector struct {
-				Name     string       `json:"name"`
-				Input    struct {
-					Order    core.State   `json:"order"`
-					RulePack core.RulePack `json:"rulePack"`
+				Name  string `json:"name"`
+				Input struct {
+					Order    core.State       `json:"order"`
+					RulePack core.RulePack    `json:"rulePack"`
 					Context  core.ContextMeta `json:"context"`
 				} `json:"input"`
 				Expected struct {

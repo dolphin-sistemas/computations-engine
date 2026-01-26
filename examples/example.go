@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/dolphin-sistemas/engine"
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/loader"
+	engine "github.com/dolphin-sistemas/computations-engine"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/loader"
 )
 
 func main() {

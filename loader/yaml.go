@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // LoadRulePackFromYAML carrega um RulePack de dados YAML

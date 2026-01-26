@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // RunPhase executa todas as regras de uma fase em ordem de prioridade

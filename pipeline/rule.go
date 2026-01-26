@@ -3,8 +3,8 @@ package pipeline
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/operators"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/operators"
 )
 
 // ExecuteActions é uma referência para actions.ExecuteActions para evitar import circular

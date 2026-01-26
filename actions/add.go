@@ -3,9 +3,9 @@ package actions
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/operators"
-	"github.com/dolphin-sistemas/engine/pkg"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/operators"
+	"github.com/dolphin-sistemas/computations-engine/pkg"
 )
 
 // ExecuteAddAction executa ação "add": incrementa valor existente

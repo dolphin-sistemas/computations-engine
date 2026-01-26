@@ -13,7 +13,7 @@ Biblioteca Go completa e reutilizável para processamento de regras de negócio 
 ## Instalação
 
 ```bash
-go get github.com/dolphin-sistemas/engine
+go get github.com/dolphin-sistemas/computations-engine
 ```
 
 ## Uso Básico
@@ -23,9 +23,9 @@ package main
 
 import (
     "context"
-    "github.com/dolphin-sistemas/engine/core"
-    "github.com/dolphin-sistemas/engine"
-    "github.com/dolphin-sistemas/engine/loader"
+    "github.com/dolphin-sistemas/computations-engine/core"
+    "github.com/dolphin-sistemas/computations-engine"
+    "github.com/dolphin-sistemas/computations-engine/loader"
 )
 
 func main() {

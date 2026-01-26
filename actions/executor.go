@@ -3,8 +3,8 @@ package actions
 import (
 	"fmt"
 
-	"github.com/dolphin-sistemas/engine/core"
-	"github.com/dolphin-sistemas/engine/pipeline"
+	"github.com/dolphin-sistemas/computations-engine/core"
+	"github.com/dolphin-sistemas/computations-engine/pipeline"
 )
 
 // ExecuteActions executa uma lista de ações sobre o State

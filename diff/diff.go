@@ -1,7 +1,7 @@
 package diff
 
 import (
-	"github.com/dolphin-sistemas/engine/core"
+	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
 // BuildStateFragment extrai apenas os campos que mudaram (otimização para UI)
