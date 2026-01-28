@@ -446,8 +446,17 @@ go test -v -run TestRunEngine_MathOperations
 ### Testar Manualmente
 
 ```bash
-# Executar exemplo
+# Exemplo básico
 go run examples/example.go
+
+# Exemplo complexo (pipeline completo)
+go run examples/example_complex.go
+
+# Exemplo avançado (cálculos complexos)
+go run examples/example_advanced.go
+
+# Exemplos de tratamento de erros
+go run examples/example_errors.go
 ```
 
 ### Test Vectors
