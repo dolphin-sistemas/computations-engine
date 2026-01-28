@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dolphin-sistemas/computations-engine/core"
@@ -48,7 +49,7 @@ func TestRunEngine_Basic(t *testing.T) {
 	}
 
 	// Executar motor
-	stateFragment, serverDelta, reasons, violations, rulesVersion, err := RunEngine(
+	result, err := RunEngine(
 		context.Background(),
 		state,
 		rulePack,
@@ -63,23 +64,23 @@ func TestRunEngine_Basic(t *testing.T) {
 		t.Fatalf("RunEngine failed: %v", err)
 	}
 
-	if rulesVersion != "v1.0.0" {
-		t.Errorf("Expected rulesVersion v1.0.0, got %s", rulesVersion)
+	if result.RulesVersion != "v1.0.0" {
+		t.Errorf("Expected rulesVersion v1.0.0, got %s", result.RulesVersion)
 	}
 
-	if len(reasons) == 0 {
+	if len(result.Reasons) == 0 {
 		t.Error("Expected at least one reason")
 	}
 
-	if stateFragment == nil {
+	if result.StateFragment == nil {
 		t.Error("Expected stateFragment")
 	}
 
-	if serverDelta == nil {
+	if result.ServerDelta == nil {
 		t.Error("Expected serverDelta")
 	}
 
-	if violations == nil {
+	if result.Violations == nil {
 		t.Error("Expected violations (can be empty)")
 	}
 }
@@ -144,7 +145,7 @@ func TestRunEngine_WithTestVectors(t *testing.T) {
 			}
 
 			// Executar motor
-			stateFragment, _, reasons, violations, rulesVersion, err := RunEngine(
+			result, err := RunEngine(
 				context.Background(),
 				vector.Input.Order,
 				vector.Input.RulePack,
@@ -155,21 +156,23 @@ func TestRunEngine_WithTestVectors(t *testing.T) {
 			}
 
 			// Verificar rulesVersion
-			if rulesVersion != vector.Expected.RulesVersion {
-				t.Errorf("rulesVersion mismatch: got %s, expected %s", rulesVersion, vector.Expected.RulesVersion)
+			if result.RulesVersion != vector.Expected.RulesVersion {
+				t.Errorf("rulesVersion mismatch: got %s, expected %s", result.RulesVersion, vector.Expected.RulesVersion)
 			}
 
 			// Verificar violations
-			if len(vector.Expected.Violations) != len(violations) {
-				t.Errorf("violations count mismatch: got %d, expected %d", len(violations), len(vector.Expected.Violations))
+			if len(vector.Expected.Violations) != len(result.Violations) {
+				t.Errorf("violations count mismatch: got %d, expected %d", len(result.Violations), len(vector.Expected.Violations))
+				t.Logf("Expected violations: %+v", vector.Expected.Violations)
+				t.Logf("Got violations: %+v", result.Violations)
 			}
 
 			// Verificar totals.total (se presente no expected)
 			if expectedTotals, ok := vector.Expected.StateFragment["totals"].(map[string]interface{}); ok {
 				if expectedTotal, ok := expectedTotals["total"].(float64); ok {
-					if stateFragment["totals"] == nil {
+					if result.StateFragment["totals"] == nil {
 						t.Error("stateFragment.totals is missing")
-					} else if totals, ok := stateFragment["totals"].(core.Totals); ok {
+					} else if totals, ok := result.StateFragment["totals"].(core.Totals); ok {
 						// Comparar com tolerância de 0.01 (erro de arredondamento)
 						diff := totals.Total - expectedTotal
 						if diff < 0 {
@@ -183,8 +186,8 @@ func TestRunEngine_WithTestVectors(t *testing.T) {
 			}
 
 			// Log para debug
-			if len(reasons) > 0 {
-				t.Logf("Executed %d rules", len(reasons))
+			if len(result.Reasons) > 0 {
+				t.Logf("Executed %d rules", len(result.Reasons))
 			}
 		})
 	}
@@ -275,7 +278,7 @@ func TestRunEngine_MathOperations(t *testing.T) {
 				Totals:   core.Totals{},
 			}
 
-			stateFragment, _, _, _, _, err := RunEngine(
+			result, err := RunEngine(
 				context.Background(),
 				state,
 				rulePack,
@@ -288,14 +291,14 @@ func TestRunEngine_MathOperations(t *testing.T) {
 				t.Fatalf("RunEngine failed: %v", err)
 			}
 
-			if fields, ok := stateFragment["fields"].(map[string]interface{}); ok {
-				if result, ok := fields["result"].(float64); ok {
-					diff := result - tt.expected
+			if fields, ok := result.StateFragment["fields"].(map[string]interface{}); ok {
+				if resultValue, ok := fields["result"].(float64); ok {
+					diff := resultValue - tt.expected
 					if diff < 0 {
 						diff = -diff
 					}
 					if diff > 0.001 {
-						t.Errorf("Expected %.3f, got %.3f", tt.expected, result)
+						t.Errorf("Expected %.3f, got %.3f", tt.expected, resultValue)
 					}
 				} else {
 					t.Errorf("Result not found or not a float64: %v", fields["result"])
@@ -305,4 +308,303 @@ func TestRunEngine_MathOperations(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestRunEngine_ErrorCases testa cenários de erro
+func TestRunEngine_ErrorCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		state       core.State
+		rulePack    core.RulePack
+		contextMeta core.ContextMeta
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "missing_rulepack_id",
+			state: core.State{
+				TenantID: "test-tenant",
+				Items:    []core.Item{},
+				Fields:   make(map[string]interface{}),
+				Totals:   core.Totals{},
+			},
+			rulePack: core.RulePack{
+				ID:      "",
+				Version: "v1.0.0",
+				Phases:  []core.RulePhase{},
+			},
+			contextMeta: core.ContextMeta{
+				TenantID: "test-tenant",
+			},
+			wantErr:     true,
+			errContains: "rulePack.id is required",
+		},
+		{
+			name: "invalid_jsonlogic_operator",
+			state: core.State{
+				TenantID: "test-tenant",
+				Items:    []core.Item{},
+				Fields:   make(map[string]interface{}),
+				Totals:   core.Totals{},
+			},
+			rulePack: core.RulePack{
+				ID:      "error-test",
+				Version: "v1.0.0",
+				Phases: []core.RulePhase{
+					{
+						Name: "baseline",
+						Rules: []core.Rule{
+							{
+								ID:        "invalid-logic",
+								Phase:     "baseline",
+								Priority:  1,
+								Enabled:   true,
+								Condition: nil,
+								Actions: []core.Action{
+									{
+										Type:   "compute",
+										Target: "fields.result",
+										Logic: map[string]interface{}{
+											"invalid_operator_xyz": []interface{}{1, 2, 3},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			contextMeta: core.ContextMeta{
+				TenantID: "test-tenant",
+			},
+			wantErr:     true,
+			errContains: "failed to apply jsonlogic",
+		},
+		{
+			name: "validate_missing_params",
+			state: core.State{
+				TenantID: "test-tenant",
+				Items:    []core.Item{},
+				Fields:   make(map[string]interface{}),
+				Totals:   core.Totals{},
+			},
+			rulePack: core.RulePack{
+				ID:      "error-test",
+				Version: "v1.0.0",
+				Phases: []core.RulePhase{
+					{
+						Name: "guards",
+						Rules: []core.Rule{
+							{
+								ID:        "validate-missing-params",
+								Phase:     "guards",
+								Priority:  1,
+								Enabled:   true,
+								Condition: nil,
+								Actions: []core.Action{
+									{
+										Type:   "validate",
+										Target: "",
+										Logic: map[string]interface{}{
+											"==": []interface{}{map[string]interface{}{"var": "test"}, nil},
+										},
+										Params: make(map[string]interface{}),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			contextMeta: core.ContextMeta{
+				TenantID: "test-tenant",
+			},
+			wantErr:     true,
+			errContains: "validate action requires field and code in params",
+		},
+		{
+			name: "validate_missing_logic",
+			state: core.State{
+				TenantID: "test-tenant",
+				Items:    []core.Item{},
+				Fields:   make(map[string]interface{}),
+				Totals:   core.Totals{},
+			},
+			rulePack: core.RulePack{
+				ID:      "error-test",
+				Version: "v1.0.0",
+				Phases: []core.RulePhase{
+					{
+						Name: "guards",
+						Rules: []core.Rule{
+							{
+								ID:        "validate-missing-logic",
+								Phase:     "guards",
+								Priority:  1,
+								Enabled:   true,
+								Condition: nil,
+								Actions: []core.Action{
+									{
+										Type:   "validate",
+										Target: "",
+										Params: map[string]interface{}{
+											"field":   "fields.test",
+											"code":    "TEST",
+											"message": "Test error",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			contextMeta: core.ContextMeta{
+				TenantID: "test-tenant",
+			},
+			wantErr:     true,
+			errContains: "validate action requires logic",
+		},
+		{
+			name: "invalid_condition",
+			state: core.State{
+				TenantID: "test-tenant",
+				Items:    []core.Item{},
+				Fields:   make(map[string]interface{}),
+				Totals:   core.Totals{},
+			},
+			rulePack: core.RulePack{
+				ID:      "error-test",
+				Version: "v1.0.0",
+				Phases: []core.RulePhase{
+					{
+						Name: "baseline",
+						Rules: []core.Rule{
+							{
+								ID:       "invalid-condition",
+								Phase:    "baseline",
+								Priority: 1,
+								Enabled:  true,
+								Condition: map[string]interface{}{
+									"unknown_operator_xyz": []interface{}{1, 2},
+								},
+								Actions: []core.Action{
+									{
+										Type:   "set",
+										Target: "fields.test",
+										Value:  1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			contextMeta: core.ContextMeta{
+				TenantID: "test-tenant",
+			},
+			wantErr:     true,
+			errContains: "failed to evaluate condition",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := RunEngine(
+				context.Background(),
+				tt.state,
+				tt.rulePack,
+				tt.contextMeta,
+			)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Expected error containing '%s', got nil", tt.errContains)
+					return
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("Expected error to contain '%s', got: %v", tt.errContains, err)
+				}
+				t.Logf("✓ Expected error occurred: %v", err)
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+					return
+				}
+				if result == nil {
+					t.Error("Expected result, got nil")
+				}
+			}
+		})
+	}
+}
+
+// TestRunEngine_ErrorVectors testa vectors de erro do diretório testdata/errors
+func TestRunEngine_ErrorVectors(t *testing.T) {
+	errorsDir := "testdata/errors"
+	entries, err := os.ReadDir(errorsDir)
+	if err != nil {
+		t.Skipf("testdata/errors directory not found: %v", err)
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		t.Run(entry.Name(), func(t *testing.T) {
+			path := filepath.Join(errorsDir, entry.Name())
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("failed to read error vector file: %v", err)
+			}
+
+			var errorVector struct {
+				Name          string `json:"name"`
+				Description   string `json:"description"`
+				Input         struct {
+					Order    core.State       `json:"order"`
+					RulePack core.RulePack    `json:"rulePack"`
+					Context  core.ContextMeta `json:"context"`
+				} `json:"input"`
+				ExpectedError string `json:"expectedError"`
+				Note          string `json:"note"`
+			}
+
+			if err := json.Unmarshal(data, &errorVector); err != nil {
+				t.Fatalf("failed to unmarshal error vector: %v", err)
+			}
+
+			// Executar motor - deve retornar erro
+			result, err := RunEngine(
+				context.Background(),
+				errorVector.Input.Order,
+				errorVector.Input.RulePack,
+				errorVector.Input.Context,
+			)
+
+			if err == nil {
+				t.Errorf("Expected error '%s', but got nil. Result: %+v", errorVector.ExpectedError, result)
+				return
+			}
+
+			if errorVector.ExpectedError != "" {
+				if !contains(err.Error(), errorVector.ExpectedError) {
+					t.Errorf("Expected error to contain '%s', got: %v", errorVector.ExpectedError, err)
+				} else {
+					t.Logf("✓ Expected error occurred: %v", err)
+				}
+			}
+
+			if errorVector.Note != "" {
+				t.Logf("Note: %s", errorVector.Note)
+			}
+		})
+	}
+}
+
+// contains verifica se uma string contém uma substring (case-insensitive)
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

@@ -1,0 +1,51 @@
+{
+  "name": "error_division_by_zero",
+  "description": "Testa comportamento com divisão por zero",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {
+        "value": 100.0
+      },
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "error-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "baseline",
+          "rules": [
+            {
+              "id": "divide-by-zero",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "fields.result",
+                  "logic": {
+                    "/": [
+                      {"var": "value"},
+                      0
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectedError": "unsupported value: +Inf",
+  "note": "JsonLogic retorna Infinity para divisão por zero, que causa erro ao serializar para JSON"
+}

@@ -129,7 +129,7 @@ func main() {
 	}
 
 	// 3. Executar motor
-	stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		context.Background(),
 		state,
 		rulePack,
@@ -144,14 +144,14 @@ func main() {
 	}
 
 	// 4. Usar resultados
-	fmt.Printf("Version: %s\n", rulesVersion)
-	fmt.Printf("Reasons: %d\n", len(reasons))
-	fmt.Printf("Violations: %d\n", len(violations))
+	fmt.Printf("Version: %s\n", result.RulesVersion)
+	fmt.Printf("Reasons: %d\n", len(result.Reasons))
+	fmt.Printf("Violations: %d\n", len(result.Violations))
 	
-	// stateFragment: campos que mudaram (para atualizar UI)
-	// serverDelta: diferenças para sincronização
-	// reasons: regras que executaram
-	// violations: violações de validação (se houver)
+	// result.StateFragment: campos que mudaram (para atualizar UI)
+	// result.ServerDelta: diferenças para sincronização
+	// result.Reasons: regras que executaram
+	// result.Violations: violações de validação (se houver)
 }
 ```
 
@@ -359,13 +359,13 @@ Multiplica valor existente:
 
 ## Retorno da Engine
 
-A função `RunEngine` retorna:
+A função `RunEngine` retorna um único objeto `RunEngineResult`:
 
 ```go
-stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(...)
+result, err := engine.RunEngine(ctx, state, rulePack, contextMeta)
 ```
 
-### `stateFragment`
+### `result.StateFragment`
 Mapa com apenas os campos que mudaram (útil para atualizar UI):
 ```json
 {
@@ -379,7 +379,7 @@ Mapa com apenas os campos que mudaram (útil para atualizar UI):
 }
 ```
 
-### `serverDelta`
+### `result.ServerDelta`
 Mapa com diferenças no formato chave-valor (útil para sincronização):
 ```json
 {
@@ -388,7 +388,7 @@ Mapa com diferenças no formato chave-valor (útil para sincronização):
 }
 ```
 
-### `reasons`
+### `result.Reasons`
 Array de regras que executaram:
 ```json
 [
@@ -400,7 +400,7 @@ Array de regras que executaram:
 ]
 ```
 
-### `violations`
+### `result.Violations`
 Array de violações de validação (vazio em sucesso):
 ```json
 [
@@ -412,7 +412,7 @@ Array de violações de validação (vazio em sucesso):
 ]
 ```
 
-### `rulesVersion`
+### `result.RulesVersion`
 Versão das regras usadas (do RulePack.version)
 
 ## Testes
@@ -458,6 +458,15 @@ Test vectors determinísticos estão em `testdata/vectors/`:
 - `vector3_taxes.json` - Cálculo de impostos
 - `vector4_totals.json` - Cálculo de totais complexo
 - `vector5_guards.json` - Validações e bloqueios
+- `vector6_dynamic_layout.json` - Validações de layout dinâmico (required, min, max, pattern, condicionais)
+
+Test vectors de erro estão em `testdata/errors/`:
+- `error1_missing_rulepack_id.json` - RulePack sem ID
+- `error2_invalid_jsonlogic.json` - JsonLogic inválido
+- `error3_validate_missing_params.json` - Ação validate sem params
+- `error4_division_by_zero.json` - Divisão por zero
+- `error5_invalid_condition.json` - Condição inválida
+- `error6_validate_missing_logic.json` - Ação validate sem logic
 
 Para mais detalhes, veja [docs/testing.md](docs/testing.md).
 

@@ -1,0 +1,23 @@
+{
+  "name": "error_missing_rulepack_id",
+  "description": "Testa erro quando RulePack não tem ID",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {},
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "",
+      "version": "v1.0.0",
+      "phases": []
+    }
+  },
+  "expectedError": "rulePack.id is required"
+}

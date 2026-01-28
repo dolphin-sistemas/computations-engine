@@ -51,22 +51,22 @@ func NewLocalClient() *Client {
 func (c *Client) ValidateOrder(
 	ctx context.Context,
 	tenantID, userID, rulesVersion string,
-	orderState, rulePack map[string]interface{},
+	stateData, rulePackData map[string]interface{},
 ) (*ValidateOrderResult, error) {
-	// Converter orderState (map) para core.State
-	state, err := convertOrderStateToState(orderState)
+	// Converter map para core.State
+	state, err := convertMapToState(stateData)
 	if err != nil {
-		return nil, fmt.Errorf("convert order state: %w", err)
+		return nil, fmt.Errorf("convert state: %w", err)
 	}
 
-	// Converter rulePack (map) para core.RulePack
-	pack, err := convertMapToRulePack(rulePack)
+	// Converter map para core.RulePack
+	pack, err := convertMapToRulePack(rulePackData)
 	if err != nil {
 		return nil, fmt.Errorf("convert rule pack: %w", err)
 	}
 
 	// Executar motor usando a biblioteca
-	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -82,8 +82,8 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Converter reasons
-	reasonsOut := make([]Reason, len(reasons))
-	for i, r := range reasons {
+	reasonsOut := make([]Reason, len(result.Reasons))
+	for i, r := range result.Reasons {
 		reasonsOut[i] = Reason{
 			RuleID:  r.RuleID,
 			Phase:   r.Phase,
@@ -92,8 +92,8 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Converter violations
-	violations := make([]Violation, len(violationsOut))
-	for i, v := range violationsOut {
+	violations := make([]Violation, len(result.Violations))
+	for i, v := range result.Violations {
 		violations[i] = Violation{
 			Field:   v.Field,
 			Code:    v.Code,
@@ -102,10 +102,10 @@ func (c *Client) ValidateOrder(
 	}
 
 	return &ValidateOrderResult{
-		StateFragment: stateFragment,
-		ServerDelta:   serverDelta,
+		StateFragment: result.StateFragment,
+		ServerDelta:   result.ServerDelta,
 		Reasons:       reasonsOut,
-		RulesVersion:  rulesVersionOut,
+		RulesVersion:  result.RulesVersion,
 		Violations:    violations,
 	}, nil
 }
@@ -114,81 +114,18 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// convertOrderStateToState converte map[string]interface{} para core.State
-// Suporta formatos antigos com campos como ProductID, Quantity, etc.
-func convertOrderStateToState(m map[string]interface{}) (core.State, error) {
-	// Converter via JSON para manter compatibilidade
+// convertMapToState converte map[string]interface{} para core.State
+func convertMapToState(m map[string]interface{}) (core.State, error) {
 	data, err := json.Marshal(m)
 	if err != nil {
 		return core.State{}, err
 	}
-
-	// Estrutura temporária para ler formato antigo
-	var oldFormat struct {
-		ID       string                 `json:"id,omitempty"`
-		TenantID string                 `json:"tenantId"`
-		Items    []struct {
-			ID          string                 `json:"id,omitempty"`
-			ProductID   string                 `json:"productId,omitempty"`
-			ProductName string                 `json:"productName,omitempty"`
-			Quantity    float64                `json:"quantity"`
-			Fields      map[string]interface{} `json:"fields"`
-		} `json:"items"`
-		Totals struct {
-			Subtotal float64 `json:"subtotal,omitempty"`
-			Discount float64 `json:"discount,omitempty"`
-			Tax      float64 `json:"tax,omitempty"`
-			Total    float64 `json:"total,omitempty"`
-		} `json:"totals"`
-		Fields map[string]interface{} `json:"fields"`
-		Meta   map[string]interface{} `json:"meta,omitempty"`
-	}
-
-	if err := json.Unmarshal(data, &oldFormat); err != nil {
+	
+	var state core.State
+	if err := json.Unmarshal(data, &state); err != nil {
 		return core.State{}, err
 	}
-
-	// Converter para novo formato
-	state := core.State{
-		ID:       oldFormat.ID,
-		TenantID: oldFormat.TenantID,
-		Fields:   oldFormat.Fields,
-		Meta:     oldFormat.Meta,
-		Totals: core.Totals{
-			Subtotal: oldFormat.Totals.Subtotal,
-			Discount: oldFormat.Totals.Discount,
-			Tax:      oldFormat.Totals.Tax,
-			Total:    oldFormat.Totals.Total,
-		},
-		Items: make([]core.Item, len(oldFormat.Items)),
-	}
-
-	// Converter items: Quantity → Amount, preservar ProductID/ProductName em Fields
-	for i, oldItem := range oldFormat.Items {
-		fields := make(map[string]interface{})
-		if oldItem.Fields != nil {
-			for k, v := range oldItem.Fields {
-				fields[k] = v
-			}
-		}
-		// Preservar campos antigos em Fields para compatibilidade
-		if oldItem.ProductID != "" {
-			fields["productId"] = oldItem.ProductID
-		}
-		if oldItem.ProductName != "" {
-			fields["productName"] = oldItem.ProductName
-		}
-		if oldItem.Quantity > 0 {
-			fields["quantity"] = oldItem.Quantity // Preservar para regras antigas
-		}
-
-		state.Items[i] = core.Item{
-			ID:     oldItem.ID,
-			Amount: oldItem.Quantity, // Quantity → Amount
-			Fields: fields,
-		}
-	}
-
+	
 	return state, nil
 }
 
@@ -208,40 +145,10 @@ func convertMapToRulePack(m map[string]interface{}) (core.RulePack, error) {
 }
 ```
 
-### 3. Atualizar RulePacks (se necessário)
-
-Se seus RulePacks usam `itemTotals`, atualize para `itemValues`:
-
-**Antes:**
-```json
-{
-  "logic": {
-    "sum": [{"var": ["itemTotals", []]}]
-  }
-}
-```
-
-**Depois:**
-```json
-{
-  "logic": {
-    "sum": [{"var": ["itemValues", []]}]
-  }
-}
-```
-
-### 4. Testar
+### 3. Testar
 
 ```bash
 go test ./internal/rulesengine/...
 go run cmd/main.go
 ```
 
-## Compatibilidade
-
-A biblioteca mantém tipos alias para compatibilidade:
-- `OrderState = State`
-- `OrderItem = Item`
-- `OrderTotals = Totals`
-
-Mas recomenda-se migrar para os novos nomes genéricos.

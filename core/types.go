@@ -25,15 +25,6 @@ type Totals struct {
 	Total    float64 `json:"total,omitempty"`
 }
 
-// Deprecated: Use State instead
-type OrderState = State
-
-// Deprecated: Use Item instead
-type OrderItem = Item
-
-// Deprecated: Use Totals instead
-type OrderTotals = Totals
-
 // RulePack representa um pacote de regras versionado
 type RulePack struct {
 	ID      string     `json:"id"`
@@ -85,4 +76,13 @@ type Violation struct {
 	Field   string `json:"field"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+// RunEngineResult representa o resultado da execução do motor
+type RunEngineResult struct {
+	StateFragment map[string]interface{} `json:"stateFragment"` // Campos que mudaram (para atualizar UI)
+	ServerDelta   map[string]interface{} `json:"serverDelta"`    // Diferenças para sincronização
+	Reasons       []Reason               `json:"reasons"`         // Regras que executaram
+	Violations    []Violation            `json:"violations"`      // Violações de validação
+	RulesVersion  string                 `json:"rulesVersion"`    // Versão das regras usadas
 }

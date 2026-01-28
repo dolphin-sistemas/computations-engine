@@ -47,10 +47,38 @@ Os test vectors estão em `testdata/vectors/` e contêm cenários determinístic
 - `vector3_taxes.json` - Cálculo de impostos
 - `vector4_totals.json` - Cálculo de totais complexo
 - `vector5_guards.json` - Validações e bloqueios
+- `vector6_dynamic_layout.json` - Validações de layout dinâmico (required, min, max, pattern, condicionais)
 
 Cada vector contém:
 - `input`: State + RulePack + Context
 - `expected`: StateFragment, RulesVersion, Violations
+
+## Test Vectors de Erro
+
+Os test vectors de erro estão em `testdata/errors/` e testam cenários de erro:
+
+- `error1_missing_rulepack_id.json` - RulePack sem ID
+- `error2_invalid_jsonlogic.json` - JsonLogic inválido
+- `error3_validate_missing_params.json` - Ação validate sem params obrigatórios
+- `error4_division_by_zero.json` - Divisão por zero
+- `error5_invalid_condition.json` - Condição com JsonLogic inválido
+- `error6_validate_missing_logic.json` - Ação validate sem logic
+
+Cada error vector contém:
+- `input`: State + RulePack + Context
+- `expectedError`: Mensagem de erro esperada
+- `description`: Descrição do cenário de erro
+- `note`: Notas adicionais (opcional)
+
+### Executar Testes de Erro
+
+```bash
+# Todos os testes de erro
+go test -v -run TestRunEngine_ErrorCases
+
+# Testes de erro via vectors
+go test -v -run TestRunEngine_ErrorVectors
+```
 
 ## Testar Manualmente
 
@@ -128,7 +156,7 @@ func main() {
 	}
 
 	// Executar
-	result, delta, reasons, violations, version, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		context.Background(),
 		state,
 		rulePack,
@@ -140,15 +168,15 @@ func main() {
 	}
 
 	// Exibir resultados
-	fmt.Printf("Version: %s\n", version)
-	fmt.Printf("Reasons: %d\n", len(reasons))
-	fmt.Printf("Violations: %d\n", len(violations))
+	fmt.Printf("Version: %s\n", result.RulesVersion)
+	fmt.Printf("Reasons: %d\n", len(result.Reasons))
+	fmt.Printf("Violations: %d\n", len(result.Violations))
 	
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	fmt.Printf("Result:\n%s\n", resultJSON)
+	resultJSON, _ := json.MarshalIndent(result.StateFragment, "", "  ")
+	fmt.Printf("State Fragment:\n%s\n", resultJSON)
 
-	deltaJSON, _ := json.MarshalIndent(delta, "", "  ")
-	fmt.Printf("Delta:\n%s\n", deltaJSON)
+	deltaJSON, _ := json.MarshalIndent(result.ServerDelta, "", "  ")
+	fmt.Printf("Server Delta:\n%s\n", deltaJSON)
 }
 ```
 

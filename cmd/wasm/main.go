@@ -1,3 +1,6 @@
+//go:build js && wasm
+// +build js,wasm
+
 package main
 
 import (
@@ -36,7 +39,7 @@ func RunEngineWASM(this js.Value, args []js.Value) interface{} {
 	}
 
 	// Executar engine
-	stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		context.Background(),
 		input.State,
 		input.RulePack,
@@ -50,16 +53,7 @@ func RunEngineWASM(this js.Value, args []js.Value) interface{} {
 		return string(result)
 	}
 
-	// Montar resposta
-	result := map[string]interface{}{
-		"stateFragment": stateFragment,
-		"serverDelta":   serverDelta,
-		"reasons":       reasons,
-		"violations":    violations,
-		"rulesVersion":  rulesVersion,
-	}
-
-	// Converter para JSON
+	// Converter resultado para JSON
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		result, _ := json.Marshal(map[string]interface{}{

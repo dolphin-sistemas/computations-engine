@@ -1,0 +1,47 @@
+{
+  "name": "error_validate_missing_logic",
+  "description": "Testa erro quando ação validate não tem logic",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {},
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "error-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "guards",
+          "rules": [
+            {
+              "id": "validate-missing-logic",
+              "phase": "guards",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "params": {
+                    "field": "fields.test",
+                    "code": "TEST",
+                    "message": "Test error"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectedError": "validate action requires logic"
+}

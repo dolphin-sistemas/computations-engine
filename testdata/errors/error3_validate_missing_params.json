@@ -1,0 +1,46 @@
+{
+  "name": "error_validate_missing_params",
+  "description": "Testa erro quando ação validate não tem params obrigatórios",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {},
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "error-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "guards",
+          "rules": [
+            {
+              "id": "validate-missing-params",
+              "phase": "guards",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    "==": [{"var": "test"}, null]
+                  },
+                  "params": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectedError": "validate action requires field and code in params"
+}

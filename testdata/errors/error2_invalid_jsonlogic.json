@@ -1,0 +1,45 @@
+{
+  "name": "error_invalid_jsonlogic",
+  "description": "Testa erro quando JsonLogic é inválido",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {},
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "error-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "baseline",
+          "rules": [
+            {
+              "id": "invalid-logic",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "fields.result",
+                  "logic": {
+                    "invalid_operator": [1, 2, 3]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectedError": "failed to apply jsonlogic"
+}

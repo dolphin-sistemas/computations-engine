@@ -8,14 +8,56 @@ import (
 
 	engine "github.com/dolphin-sistemas/computations-engine"
 	"github.com/dolphin-sistemas/computations-engine/core"
-	"github.com/dolphin-sistemas/computations-engine/loader"
 )
 
 func main() {
-	// Exemplo 1: Carregar RulePack de arquivo JSON
-	rulePack, err := loader.LoadRulePackFromFile("testdata/vectors/vector1_baseline.json")
-	if err != nil {
-		log.Fatalf("Failed to load rule pack: %v", err)
+	// Exemplo 1: Criar RulePack diretamente
+	rulePack := core.RulePack{
+		ID:      "example-rules",
+		Version: "v1.0.0",
+		Phases: []core.RulePhase{
+			{
+				Name: "baseline",
+				Rules: []core.Rule{
+					{
+						ID:        "calc-subtotal",
+						Phase:     "baseline",
+						Priority:  1,
+						Enabled:   true,
+						Condition: nil,
+						Actions: []core.Action{
+							{
+								Type:   "compute",
+								Target: "totals.subtotal",
+								Logic: map[string]interface{}{
+									"sum": []interface{}{
+										map[string]interface{}{
+											"var": []interface{}{"itemValues", []interface{}{}},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						ID:        "calc-total",
+						Phase:     "baseline",
+						Priority:  2,
+						Enabled:   true,
+						Condition: nil,
+						Actions: []core.Action{
+							{
+								Type:   "compute",
+								Target: "totals.total",
+								Logic: map[string]interface{}{
+									"var": []interface{}{"totals.subtotal", 0},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// Exemplo 2: Criar um estado
@@ -26,18 +68,23 @@ func main() {
 				ID:     "item-1",
 				Amount: 2,
 				Fields: map[string]interface{}{
-					"basePrice": 2500.0,
+					"value": 100.0,
+				},
+			},
+			{
+				ID:     "item-2",
+				Amount: 1,
+				Fields: map[string]interface{}{
+					"value": 50.0,
 				},
 			},
 		},
-		Fields: map[string]interface{}{
-			"customerType": "PF",
-		},
+		Fields: make(map[string]interface{}),
 		Totals: core.Totals{},
 	}
 
 	// Exemplo 3: Executar motor de regras
-	stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		context.Background(),
 		state,
 		rulePack,
@@ -52,13 +99,13 @@ func main() {
 	}
 
 	// Exemplo 4: Exibir resultados
-	fmt.Printf("Rules Version: %s\n", rulesVersion)
-	fmt.Printf("Reasons: %d\n", len(reasons))
-	fmt.Printf("Violations: %d\n", len(violations))
+	fmt.Printf("Rules Version: %s\n", result.RulesVersion)
+	fmt.Printf("Reasons: %d\n", len(result.Reasons))
+	fmt.Printf("Violations: %d\n", len(result.Violations))
 
-	stateJSON, _ := json.MarshalIndent(stateFragment, "", "  ")
+	stateJSON, _ := json.MarshalIndent(result.StateFragment, "", "  ")
 	fmt.Printf("State Fragment:\n%s\n", stateJSON)
 
-	deltaJSON, _ := json.MarshalIndent(serverDelta, "", "  ")
+	deltaJSON, _ := json.MarshalIndent(result.ServerDelta, "", "  ")
 	fmt.Printf("Server Delta:\n%s\n", deltaJSON)
 }

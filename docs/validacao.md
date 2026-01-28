@@ -119,7 +119,7 @@ type Violation struct {
 ### Exemplo de Retorno com Erros
 
 ```go
-stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+result, err := engine.RunEngine(
     ctx,
     state,
     rulePack,
@@ -127,9 +127,9 @@ stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.Run
 )
 
 // Se houver violations
-if len(violations) > 0 {
+if len(result.Violations) > 0 {
     // violations contém todas as violações encontradas
-    for _, v := range violations {
+    for _, v := range result.Violations {
         fmt.Printf("Field: %s, Code: %s, Message: %s\n", 
             v.Field, v.Code, v.Message)
     }
@@ -164,19 +164,19 @@ if len(violations) > 0 {
 ### Quando Não Há Violations
 
 ```go
-stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+result, err := engine.RunEngine(
     ctx,
     state,
     rulePack,
     contextMeta,
 )
 
-// Sucesso: err == nil && len(violations) == 0
-if err == nil && len(violations) == 0 {
-    // stateFragment: campos que mudaram (para atualizar UI)
-    // serverDelta: diferenças para sincronização
-    // reasons: regras que executaram
-    // rulesVersion: versão das regras usadas
+// Sucesso: err == nil && len(result.Violations) == 0
+if err == nil && len(result.Violations) == 0 {
+    // result.StateFragment: campos que mudaram (para atualizar UI)
+    // result.ServerDelta: diferenças para sincronização
+    // result.Reasons: regras que executaram
+    // result.RulesVersion: versão das regras usadas
 }
 ```
 

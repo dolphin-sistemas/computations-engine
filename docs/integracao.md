@@ -43,17 +43,17 @@ import (
 func (c *Client) ValidateOrder(
 	ctx context.Context,
 	tenantID, userID, rulesVersion string,
-	orderState, rulePack map[string]interface{},
+	stateData, rulePackData map[string]interface{},
 ) (*ValidateOrderResult, error) {
-	// Converter orderState para core.State
-	orderStateJSON, err := json.Marshal(orderState)
+	// Converter map para core.State
+	stateJSON, err := json.Marshal(stateData)
 	if err != nil {
-		return nil, fmt.Errorf("marshal order state: %w", err)
+		return nil, fmt.Errorf("marshal state: %w", err)
 	}
 	
 	var state core.State
-	if err := json.Unmarshal(orderStateJSON, &state); err != nil {
-		return nil, fmt.Errorf("unmarshal order state: %w", err)
+	if err := json.Unmarshal(stateJSON, &state); err != nil {
+		return nil, fmt.Errorf("unmarshal state: %w", err)
 	}
 
 	// Converter rulePack para core.RulePack
@@ -67,8 +67,8 @@ func (c *Client) ValidateOrder(
 		return nil, fmt.Errorf("unmarshal rule pack: %w", err)
 	}
 
-	// Executar motor usando a nova biblioteca
-	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
+	// Executar motor usando a biblioteca
+	result, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -84,16 +84,16 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Converter violations e reasons
-	violations := make([]Violation, len(violationsOut))
-	for i, v := range violationsOut {
+	violations := make([]Violation, len(result.Violations))
+	for i, v := range result.Violations {
 		violations[i] = Violation{
 			Field:   v.Field,
 			Code:    v.Code,
 			Message: v.Message,
 		}
 	}
-	reasonsOut := make([]Reason, len(reasons))
-	for i, r := range reasons {
+	reasonsOut := make([]Reason, len(result.Reasons))
+	for i, r := range result.Reasons {
 		reasonsOut[i] = Reason{
 			RuleID:  r.RuleID,
 			Phase:   r.Phase,
@@ -102,18 +102,18 @@ func (c *Client) ValidateOrder(
 	}
 
 	return &ValidateOrderResult{
-		StateFragment: stateFragment,
-		ServerDelta:   serverDelta,
+		StateFragment: result.StateFragment,
+		ServerDelta:   result.ServerDelta,
 		Reasons:       reasonsOut,
-		RulesVersion:  rulesVersionOut,
+		RulesVersion:  result.RulesVersion,
 		Violations:    violations,
 	}, nil
 }
 ```
 
-## Opção 2: Adapter com Compatibilidade
+## Opção 2: Adapter
 
-Criar um adapter que mantém a interface atual mas usa a nova biblioteca:
+Criar um adapter que usa a biblioteca engine:
 
 ### Criar um Adapter
 
@@ -131,7 +131,7 @@ import (
 	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
-// Adapter adapta a nova biblioteca engine para a interface atual
+// Adapter adapta a biblioteca engine para a interface do projeto
 type Adapter struct {
 	// Pode adicionar cache, logger, etc.
 }
@@ -140,12 +140,12 @@ type Adapter struct {
 func (a *Adapter) ValidateOrder(
 	ctx context.Context,
 	tenantID, userID, rulesVersion string,
-	orderState, rulePack map[string]interface{},
+	stateData, rulePackData map[string]interface{},
 ) (*ValidateOrderResult, error) {
 	// Converter map[string]interface{} para core.State
-	state, err := mapToState(orderState)
+	state, err := mapToState(stateData)
 	if err != nil {
-		return nil, fmt.Errorf("convert order state: %w", err)
+		return nil, fmt.Errorf("convert state: %w", err)
 	}
 
 	// Converter map[string]interface{} para core.RulePack
@@ -155,7 +155,7 @@ func (a *Adapter) ValidateOrder(
 	}
 
 	// Executar motor
-	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -171,11 +171,11 @@ func (a *Adapter) ValidateOrder(
 
 	// Converter resultados
 	return &ValidateOrderResult{
-		StateFragment: stateFragment,
-		ServerDelta:   serverDelta,
-		Reasons:       convertReasons(reasons),
-		RulesVersion:  rulesVersionOut,
-		Violations:    convertViolations(violationsOut),
+		StateFragment: result.StateFragment,
+		ServerDelta:   result.ServerDelta,
+		Reasons:       convertReasons(result.Reasons),
+		RulesVersion:  result.RulesVersion,
+		Violations:    convertViolations(result.Violations),
 	}, nil
 }
 
@@ -236,9 +236,9 @@ func convertViolations(violations []core.Violation) []Violation {
 }
 ```
 
-## Opção 3: Migração Completa (Recomendado)
+## Opção 3: Implementação Completa (Recomendado)
 
-Substituir completamente o código antigo pela nova biblioteca:
+Implementação completa usando a biblioteca engine:
 
 ### 1. Atualizar go.mod
 
@@ -278,12 +278,12 @@ func NewLocalClient() *Client {
 func (c *Client) ValidateOrder(
 	ctx context.Context,
 	tenantID, userID, rulesVersion string,
-	orderState, rulePack map[string]interface{},
+	stateData, rulePackData map[string]interface{},
 ) (*ValidateOrderResult, error) {
-	// Converter para tipos da nova biblioteca
-	state, err := convertMapToState(orderState)
+	// Converter map para core.State
+	state, err := convertMapToState(stateData)
 	if err != nil {
-		return nil, fmt.Errorf("convert order state: %w", err)
+		return nil, fmt.Errorf("convert state: %w", err)
 	}
 
 	pack, err := convertMapToRulePack(rulePack)
@@ -292,7 +292,7 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Executar motor
-	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
+	result, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -308,8 +308,8 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Converter violations
-	violations := make([]Violation, len(violationsOut))
-	for i, v := range violationsOut {
+	violations := make([]Violation, len(result.Violations))
+	for i, v := range result.Violations {
 		violations[i] = Violation{
 			Field:   v.Field,
 			Code:    v.Code,
@@ -318,10 +318,10 @@ func (c *Client) ValidateOrder(
 	}
 
 	return &ValidateOrderResult{
-		StateFragment: stateFragment,
-		ServerDelta:   serverDelta,
-		Reasons:       convertReasons(reasons),
-		RulesVersion:  rulesVersionOut,
+		StateFragment: result.StateFragment,
+		ServerDelta:   result.ServerDelta,
+		Reasons:       convertReasons(result.Reasons),
+		RulesVersion:  result.RulesVersion,
 		Violations:    violations,
 	}, nil
 }
@@ -332,11 +332,16 @@ func (c *Client) Close() error {
 
 // Funções auxiliares de conversão
 func convertMapToState(m map[string]interface{}) (core.State, error) {
-	// Implementar conversão de map para core.State
-	// Tratar campos antigos (ProductID, Quantity) → novos (Amount)
-	data, _ := json.Marshal(m)
+	data, err := json.Marshal(m)
+	if err != nil {
+		return core.State{}, err
+	}
+	
 	var state core.State
-	json.Unmarshal(data, &state)
+	if err := json.Unmarshal(data, &state); err != nil {
+		return core.State{}, err
+	}
+	
 	return state, nil
 }
 
@@ -360,60 +365,14 @@ func convertReasons(reasons []core.Reason) []Reason {
 }
 ```
 
-### 3. Remover código antigo (Opcional)
-
-Após validar que tudo funciona, você pode remover qualquer implementação antiga da engine que não seja mais necessária.
-
-### 4. Atualizar RulePacks (se necessário)
-
-Se seus RulePacks JSON usam `itemTotals`, atualize para `itemValues`:
-
-**Buscar e substituir:**
-```json
-"itemTotals" → "itemValues"
-```
-
-### 5. Testar
+### 3. Testar
 
 ```bash
 go test ./internal/rulesengine/...
 go run cmd/main.go
 ```
 
-## Compatibilidade
-
-A biblioteca mantém compatibilidade com tipos antigos via aliases:
-- `OrderState = State`
-- `OrderItem = Item`  
-- `OrderTotals = Totals`
-
-Mas os campos `ProductID`, `ProductName`, `Quantity` precisam ser convertidos:
-- `Quantity` → `Amount`
-- `ProductID`/`ProductName` → preservados em `Fields` para compatibilidade
-
-## Diferenças de API
-
-**Antigo:**
-```go
-input := enginecore.ComputeInput{
-    Order:    order,
-    RulePack: pack,
-    Context:  context,
-}
-out, err := enginecore.Compute(input)
-```
-
-**Novo:**
-```go
-stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
-    ctx,
-    state,
-    pack,
-    contextMeta,
-)
-```
-
-## Suporte a Violations
+## API da Engine
 
 Violations são retornadas diretamente pela função `RunEngine`:
 

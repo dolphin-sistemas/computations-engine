@@ -1,0 +1,201 @@
+{
+  "name": "dynamic_layout_validation",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {
+        "customerType": "PF",
+        "email": "",
+        "discountPercent": null,
+        "phone": null,
+        "age": 15
+      },
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "dynamic-layout-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "guards",
+          "rules": [
+            {
+              "id": "validate-required-email",
+              "phase": "guards",
+              "priority": 1,
+              "enabled": true,
+              "condition": {
+                "==": [
+                  { "var": "customerType" },
+                  "PF"
+                ]
+              },
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    "or": [
+                      { "==": [{ "var": "email" }, null] },
+                      { "==": [{ "var": "email" }, ""] }
+                    ]
+                  },
+                  "params": {
+                    "field": "fields.email",
+                    "code": "REQUIRED",
+                    "message": "Email é obrigatório para pessoa física"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "validate-phone-required",
+              "phase": "guards",
+              "priority": 2,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    "or": [
+                      { "==": [{ "var": "phone" }, null] },
+                      { "==": [{ "var": "phone" }, ""] }
+                    ]
+                  },
+                  "params": {
+                    "field": "fields.phone",
+                    "code": "REQUIRED",
+                    "message": "Telefone é obrigatório"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "validate-age-min",
+              "phase": "guards",
+              "priority": 3,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    "<": [
+                      {
+                        "if": [
+                          { "==": [{ "var": "age" }, null] },
+                          0,
+                          { "var": "age" }
+                        ]
+                      },
+                      18
+                    ]
+                  },
+                  "params": {
+                    "field": "fields.age",
+                    "code": "MIN_VALUE",
+                    "message": "Idade mínima é 18 anos"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "validate-discount-max",
+              "phase": "guards",
+              "priority": 4,
+              "enabled": true,
+              "condition": {
+                "and": [
+                  { "!=": [{ "var": "discountPercent" }, null] },
+                  { ">": [{ "var": "discountPercent" }, 0] }
+                ]
+              },
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    ">": [
+                      { "var": "discountPercent" },
+                      {
+                        "if": [
+                          { "==": [{ "var": "customerType" }, "PF"] },
+                          10,
+                          20
+                        ]
+                      }
+                    ]
+                  },
+                  "params": {
+                    "field": "fields.discountPercent",
+                    "code": "MAX_VALUE",
+                    "message": "Desconto máximo excedido para este tipo de cliente"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "conditional-require-discount-for-pj",
+              "phase": "guards",
+              "priority": 5,
+              "enabled": true,
+              "condition": {
+                "==": [
+                  { "var": "customerType" },
+                  "PJ"
+                ]
+              },
+              "actions": [
+                {
+                  "type": "validate",
+                  "target": "",
+                  "logic": {
+                    "or": [
+                      { "==": [{ "var": "discountPercent" }, null] },
+                      { "==": [{ "var": "discountPercent" }, 0] }
+                    ]
+                  },
+                  "params": {
+                    "field": "fields.discountPercent",
+                    "code": "REQUIRED",
+                    "message": "Desconto é obrigatório para pessoa jurídica"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "stateFragment": {},
+    "rulesVersion": "v1.0.0",
+    "violations": [
+      {
+        "field": "fields.email",
+        "code": "REQUIRED",
+        "message": "Email é obrigatório para pessoa física"
+      },
+      {
+        "field": "fields.phone",
+        "code": "REQUIRED",
+        "message": "Telefone é obrigatório"
+      },
+      {
+        "field": "fields.age",
+        "code": "MIN_VALUE",
+        "message": "Idade mínima é 18 anos"
+      }
+    ]
+  }
+}

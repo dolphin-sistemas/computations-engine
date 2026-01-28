@@ -1,0 +1,45 @@
+{
+  "name": "error_invalid_condition",
+  "description": "Testa erro quando condition tem JsonLogic inválido",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [],
+      "fields": {},
+      "totals": {}
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    },
+    "rulePack": {
+      "id": "error-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "baseline",
+          "rules": [
+            {
+              "id": "invalid-condition",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": {
+                "unknown_operator": [1, 2]
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "target": "fields.test",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectedError": "failed to evaluate condition"
+}
