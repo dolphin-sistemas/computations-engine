@@ -1,6 +1,6 @@
 module github.com/dolphin-sistemas/computations-engine
 
-go 1.24.0
+go 1.24.2
 
 require (
 	github.com/diegoholiveira/jsonlogic/v3 v3.9.0

@@ -1,10 +1,12 @@
-# Exemplo de Uso - Integração com teste-opa-jsonlogic-next
+# Exemplo de Uso
+
+Este documento mostra um exemplo prático de como integrar a engine em seu projeto.
 
 ## Passo a Passo
 
-### 1. Adicionar Dependência Local
+### 1. Adicionar Dependência
 
-No arquivo `teste-opa-jsonlogic-next/go.mod`:
+No arquivo `go.mod` do seu projeto:
 
 ```go
 require (
@@ -17,13 +19,12 @@ replace github.com/dolphin-sistemas/computations-engine => ../engine
 
 Execute:
 ```bash
-cd teste-opa-jsonlogic-next
 go mod tidy
 ```
 
-### 2. Atualizar Client
+### 2. Criar Client
 
-Substitua o conteúdo de `internal/infra/rulesengine/client.go`:
+Crie um client que usa a engine. Exemplo em `internal/rulesengine/client.go`:
 
 ```go
 package rulesengine
@@ -64,8 +65,8 @@ func (c *Client) ValidateOrder(
 		return nil, fmt.Errorf("convert rule pack: %w", err)
 	}
 
-	// Executar motor usando a nova biblioteca
-	stateFragment, serverDelta, reasons, rulesVersionOut, err := engine.RunEngine(
+	// Executar motor usando a biblioteca
+	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -90,9 +91,15 @@ func (c *Client) ValidateOrder(
 		}
 	}
 
-	// Nota: Violations precisam ser obtidas de outra forma
-	// Por enquanto, retornar vazio ou implementar lógica adicional
-	violations := []Violation{}
+	// Converter violations
+	violations := make([]Violation, len(violationsOut))
+	for i, v := range violationsOut {
+		violations[i] = Violation{
+			Field:   v.Field,
+			Code:    v.Code,
+			Message: v.Message,
+		}
+	}
 
 	return &ValidateOrderResult{
 		StateFragment: stateFragment,
@@ -107,7 +114,8 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// convertOrderStateToState converte map[string]interface{} (formato antigo) para core.State
+// convertOrderStateToState converte map[string]interface{} para core.State
+// Suporta formatos antigos com campos como ProductID, Quantity, etc.
 func convertOrderStateToState(m map[string]interface{}) (core.State, error) {
 	// Converter via JSON para manter compatibilidade
 	data, err := json.Marshal(m)
@@ -225,8 +233,7 @@ Se seus RulePacks usam `itemTotals`, atualize para `itemValues`:
 ### 4. Testar
 
 ```bash
-cd teste-opa-jsonlogic-next
-go test ./internal/infra/rulesengine/...
+go test ./internal/rulesengine/...
 go run cmd/main.go
 ```
 

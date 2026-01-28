@@ -128,7 +128,7 @@ func main() {
 	}
 
 	// Executar
-	result, delta, reasons, version, err := engine.RunEngine(
+	result, delta, reasons, violations, version, err := engine.RunEngine(
 		context.Background(),
 		state,
 		rulePack,
@@ -142,6 +142,7 @@ func main() {
 	// Exibir resultados
 	fmt.Printf("Version: %s\n", version)
 	fmt.Printf("Reasons: %d\n", len(reasons))
+	fmt.Printf("Violations: %d\n", len(violations))
 	
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Printf("Result:\n%s\n", resultJSON)

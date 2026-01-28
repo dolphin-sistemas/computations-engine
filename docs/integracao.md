@@ -1,29 +1,30 @@
-# Guia de Integração - Usar engine no teste-opa-jsonlogic-next
+# Guia de Integração
 
-Este guia mostra como integrar a biblioteca `engine` no projeto `teste-opa-jsonlogic-next`.
+Este guia mostra como integrar a biblioteca `engine` em seu projeto Go.
 
 ## Opção 1: Usar como Módulo Local (Desenvolvimento)
 
-### 1. Adicionar replace no go.mod
+### 1. Adicionar dependência no go.mod
 
-No arquivo `teste-opa-jsonlogic-next/go.mod`, adicione:
+No arquivo `go.mod` do seu projeto, adicione:
 
 ```go
-module github.com/dolphin-sistemas/template-api-go
+module seu-projeto
 
-go 1.24.4
+go 1.24.0
 
 require (
     // ... outras dependências
     github.com/dolphin-sistemas/computations-engine v0.0.0
 )
 
+// Para desenvolvimento local, use replace:
 replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
-### 2. Atualizar o Client
+### 2. Criar ou Atualizar o Client
 
-Modifique `internal/infra/rulesengine/client.go`:
+Crie um client que usa a engine. Exemplo em `internal/rulesengine/client.go`:
 
 ```go
 package rulesengine
@@ -38,7 +39,7 @@ import (
 	"github.com/dolphin-sistemas/computations-engine/core"
 )
 
-// ValidateOrder valida/computa um pedido usando a biblioteca engine
+// ValidateOrder valida/computa dados usando a biblioteca engine
 func (c *Client) ValidateOrder(
 	ctx context.Context,
 	tenantID, userID, rulesVersion string,
@@ -67,7 +68,7 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Executar motor usando a nova biblioteca
-	stateFragment, serverDelta, reasons, rulesVersionOut, err := engine.RunEngine(
+	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -83,8 +84,14 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Converter violations e reasons
-	// Nota: você precisará obter violations do contexto se necessário
-	violations := []Violation{} // Adicionar lógica para obter violations
+	violations := make([]Violation, len(violationsOut))
+	for i, v := range violationsOut {
+		violations[i] = Violation{
+			Field:   v.Field,
+			Code:    v.Code,
+			Message: v.Message,
+		}
+	}
 	reasonsOut := make([]Reason, len(reasons))
 	for i, r := range reasons {
 		reasonsOut[i] = Reason{
@@ -108,7 +115,9 @@ func (c *Client) ValidateOrder(
 
 Criar um adapter que mantém a interface atual mas usa a nova biblioteca:
 
-### Criar `internal/infra/rulesengine/adapter.go`
+### Criar um Adapter
+
+Exemplo em `internal/rulesengine/adapter.go`:
 
 ```go
 package rulesengine
@@ -146,7 +155,7 @@ func (a *Adapter) ValidateOrder(
 	}
 
 	// Executar motor
-	stateFragment, serverDelta, reasons, rulesVersionOut, err := engine.RunEngine(
+	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -166,7 +175,7 @@ func (a *Adapter) ValidateOrder(
 		ServerDelta:   serverDelta,
 		Reasons:       convertReasons(reasons),
 		RulesVersion:  rulesVersionOut,
-		Violations:    []Violation{}, // Adicionar lógica se necessário
+		Violations:    convertViolations(violationsOut),
 	}, nil
 }
 
@@ -178,65 +187,10 @@ func mapToState(m map[string]interface{}) (core.State, error) {
 	}
 	
 	var state core.State
-	// Converter OrderState antigo para State novo
-	var oldState struct {
-		ID       string                 `json:"id,omitempty"`
-		TenantID string                 `json:"tenantId"`
-		Items    []struct {
-			ID          string                 `json:"id,omitempty"`
-			ProductID   string                 `json:"productId"`
-			ProductName string                 `json:"productName,omitempty"`
-			Quantity    float64                `json:"quantity"`
-			Fields      map[string]interface{} `json:"fields"`
-		} `json:"items"`
-		Totals struct {
-			Subtotal float64 `json:"subtotal,omitempty"`
-			Discount float64 `json:"discount,omitempty"`
-			Tax      float64 `json:"tax,omitempty"`
-			Total    float64 `json:"total,omitempty"`
-		} `json:"totals"`
-		Fields map[string]interface{} `json:"fields"`
-		Meta   map[string]interface{} `json:"meta,omitempty"`
-	}
-	
-	if err := json.Unmarshal(data, &oldState); err != nil {
+	if err := json.Unmarshal(data, &state); err != nil {
 		return core.State{}, err
 	}
-
-	// Converter para novo formato
-	state = core.State{
-		ID:       oldState.ID,
-		TenantID: oldState.TenantID,
-		Fields:   oldState.Fields,
-		Meta:     oldState.Meta,
-		Totals: core.Totals{
-			Subtotal: oldState.Totals.Subtotal,
-			Discount: oldState.Totals.Discount,
-			Tax:      oldState.Totals.Tax,
-			Total:    oldState.Totals.Total,
-		},
-	}
-
-	// Converter items
-	state.Items = make([]core.Item, len(oldState.Items))
-	for i, oldItem := range oldState.Items {
-		state.Items[i] = core.Item{
-			ID:     oldItem.ID,
-			Amount: oldItem.Quantity, // Quantity → Amount
-			Fields: oldItem.Fields,
-		}
-		// Preservar productId e productName em Fields se necessário
-		if oldItem.ProductID != "" {
-			if state.Items[i].Fields == nil {
-				state.Items[i].Fields = make(map[string]interface{})
-			}
-			state.Items[i].Fields["productId"] = oldItem.ProductID
-			if oldItem.ProductName != "" {
-				state.Items[i].Fields["productName"] = oldItem.ProductName
-			}
-		}
-	}
-
+	
 	return state, nil
 }
 
@@ -267,6 +221,19 @@ func convertReasons(reasons []core.Reason) []Reason {
 	}
 	return result
 }
+
+// convertViolations converte core.Violation para rulesengine.Violation
+func convertViolations(violations []core.Violation) []Violation {
+	result := make([]Violation, len(violations))
+	for i, v := range violations {
+		result[i] = Violation{
+			Field:   v.Field,
+			Code:    v.Code,
+			Message: v.Message,
+		}
+	}
+	return result
+}
 ```
 
 ## Opção 3: Migração Completa (Recomendado)
@@ -283,9 +250,9 @@ require (
 replace github.com/dolphin-sistemas/computations-engine => ../engine
 ```
 
-### 2. Atualizar client.go
+### 2. Criar Client
 
-Substituir `internal/infra/rulesengine/client.go` completamente:
+Exemplo completo de client em `internal/rulesengine/client.go`:
 
 ```go
 package rulesengine
@@ -325,7 +292,7 @@ func (c *Client) ValidateOrder(
 	}
 
 	// Executar motor
-	stateFragment, serverDelta, reasons, rulesVersionOut, err := engine.RunEngine(
+	stateFragment, serverDelta, reasons, violationsOut, rulesVersionOut, err := engine.RunEngine(
 		ctx,
 		state,
 		pack,
@@ -340,8 +307,15 @@ func (c *Client) ValidateOrder(
 		return nil, fmt.Errorf("rules engine: %w", err)
 	}
 
-	// Converter violations (se necessário obter do contexto)
-	violations := []Violation{} // Implementar lógica se necessário
+	// Converter violations
+	violations := make([]Violation, len(violationsOut))
+	for i, v := range violationsOut {
+		violations[i] = Violation{
+			Field:   v.Field,
+			Code:    v.Code,
+			Message: v.Message,
+		}
+	}
 
 	return &ValidateOrderResult{
 		StateFragment: stateFragment,
@@ -386,45 +360,70 @@ func convertReasons(reasons []core.Reason) []Reason {
 }
 ```
 
-## Diferenças Importantes
+### 3. Remover código antigo (Opcional)
 
-### Campos Renomeados
+Após validar que tudo funciona, você pode remover qualquer implementação antiga da engine que não seja mais necessária.
 
-- `OrderState` → `State`
-- `OrderItem` → `Item`
-- `OrderTotals` → `Totals`
+### 4. Atualizar RulePacks (se necessário)
+
+Se seus RulePacks JSON usam `itemTotals`, atualize para `itemValues`:
+
+**Buscar e substituir:**
+```json
+"itemTotals" → "itemValues"
+```
+
+### 5. Testar
+
+```bash
+go test ./internal/rulesengine/...
+go run cmd/main.go
+```
+
+## Compatibilidade
+
+A biblioteca mantém compatibilidade com tipos antigos via aliases:
+- `OrderState = State`
+- `OrderItem = Item`  
+- `OrderTotals = Totals`
+
+Mas os campos `ProductID`, `ProductName`, `Quantity` precisam ser convertidos:
 - `Quantity` → `Amount`
-- Removidos: `ProductID`, `ProductName` (podem ser mantidos em `Fields`)
+- `ProductID`/`ProductName` → preservados em `Fields` para compatibilidade
 
-### API Mudou
+## Diferenças de API
 
-- Antigo: `enginecore.Compute(input ComputeInput)`
-- Novo: `engine.RunEngine(ctx, state State, rules RulePack, contextMeta ContextMeta)`
-
-### itemTotals → itemValues
-
-Nos RulePacks, atualizar referências:
-- `{"var": ["itemTotals", []]}` → `{"var": ["itemValues", []]}`
-
-## Testar a Integração
-
-1. Executar testes do projeto:
-```bash
-cd teste-opa-jsonlogic-next
-go test ./internal/infra/rulesengine/...
+**Antigo:**
+```go
+input := enginecore.ComputeInput{
+    Order:    order,
+    RulePack: pack,
+    Context:  context,
+}
+out, err := enginecore.Compute(input)
 ```
 
-2. Testar endpoint:
-```bash
-curl -X POST http://localhost:8080/v1/orders \
-  -H "Content-Type: application/json" \
-  -d @test_order.json
+**Novo:**
+```go
+stateFragment, serverDelta, reasons, violations, rulesVersion, err := engine.RunEngine(
+    ctx,
+    state,
+    pack,
+    contextMeta,
+)
 ```
 
-## Próximos Passos
+## Suporte a Violations
 
-1. Adicionar replace no go.mod
-2. Atualizar client.go para usar engine.RunEngine
-3. Converter dados de entrada (map → State)
-4. Atualizar RulePacks para usar `itemValues` ao invés de `itemTotals`
-5. Testar e validar resultados
+Violations são retornadas diretamente pela função `RunEngine`:
+
+```go
+violations := make([]Violation, len(violationsOut))
+for i, v := range violationsOut {
+    violations[i] = Violation{
+        Field:   v.Field,
+        Code:    v.Code,
+        Message: v.Message,
+    }
+}
+```
