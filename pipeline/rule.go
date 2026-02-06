@@ -97,22 +97,29 @@ func BuildEvaluationData(ctx *core.EngineContext) map[string]interface{} {
 	data["items"] = itemsData
 
 	// Helper: itemValues (array de valores dos itens) para facilitar sum(itemValues)
-	// Procura por campo "value" ou "total" nos fields do item
 	itemValues := make([]float64, len(state.Items))
+	itemTotals := make([]float64, len(state.Items))
 	for i, item := range state.Items {
 		var value float64
-		// Tentar encontrar valor em fields["value"] ou fields["total"]
 		if v, ok := item.Fields["value"]; ok {
 			value = toFloat64(v)
 		} else if v, ok := item.Fields["total"]; ok {
 			value = toFloat64(v)
+		} else if v, ok := item.Fields["itemTotal"]; ok {
+			value = toFloat64(v)
 		} else {
-			// Fallback para amount
 			value = item.Amount
 		}
 		itemValues[i] = value
+		// itemTotals: prefer itemTotal, then total, value, amount
+		if v, ok := item.Fields["itemTotal"]; ok {
+			itemTotals[i] = toFloat64(v)
+		} else {
+			itemTotals[i] = value
+		}
 	}
 	data["itemValues"] = itemValues
+	data["itemTotals"] = itemTotals
 
 	return data
 }

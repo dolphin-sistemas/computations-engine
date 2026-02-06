@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,22 +168,17 @@ func TestRunEngine_WithTestVectors(t *testing.T) {
 				t.Logf("Got violations: %+v", result.Violations)
 			}
 
-			// Verificar totals.total (se presente no expected)
-			if expectedTotals, ok := vector.Expected.StateFragment["totals"].(map[string]interface{}); ok {
-				if expectedTotal, ok := expectedTotals["total"].(float64); ok {
-					if result.StateFragment["totals"] == nil {
-						t.Error("stateFragment.totals is missing")
-					} else if totals, ok := result.StateFragment["totals"].(core.Totals); ok {
-						// Comparar com tolerância de 0.01 (erro de arredondamento)
-						diff := totals.Total - expectedTotal
-						if diff < 0 {
-							diff = -diff
-						}
-						if diff > 0.01 {
-							t.Errorf("totals.total mismatch: got %.2f, expected %.2f", totals.Total, expectedTotal)
-						}
-					}
+			// Verificar stateFragment (expected is treated as a subset of actual)
+			if vector.Expected.StateFragment != nil && len(vector.Expected.StateFragment) > 0 {
+				actualNorm, err := normalizeJSON(result.StateFragment)
+				if err != nil {
+					t.Fatalf("failed to normalize actual stateFragment: %v", err)
 				}
+				expectedNorm, err := normalizeJSON(vector.Expected.StateFragment)
+				if err != nil {
+					t.Fatalf("failed to normalize expected stateFragment: %v", err)
+				}
+				assertSubset(t, expectedNorm, actualNorm, "stateFragment")
 			}
 
 			// Log para debug
@@ -561,9 +557,9 @@ func TestRunEngine_ErrorVectors(t *testing.T) {
 			}
 
 			var errorVector struct {
-				Name          string `json:"name"`
-				Description   string `json:"description"`
-				Input         struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+				Input       struct {
 					Order    core.State       `json:"order"`
 					RulePack core.RulePack    `json:"rulePack"`
 					Context  core.ContextMeta `json:"context"`
@@ -607,4 +603,75 @@ func TestRunEngine_ErrorVectors(t *testing.T) {
 // contains verifica se uma string contém uma substring (case-insensitive)
 func contains(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+func normalizeJSON(v interface{}) (interface{}, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var out interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func assertSubset(t *testing.T, expected, actual interface{}, path string) {
+	t.Helper()
+
+	if expected == nil {
+		if actual != nil {
+			t.Fatalf("%s: expected nil, got %T", path, actual)
+		}
+		return
+	}
+
+	switch e := expected.(type) {
+	case map[string]interface{}:
+		a, ok := actual.(map[string]interface{})
+		if !ok {
+			t.Fatalf("%s: expected object, got %T", path, actual)
+		}
+		for k, ev := range e {
+			av, exists := a[k]
+			if !exists {
+				t.Fatalf("%s.%s: missing key", path, k)
+			}
+			assertSubset(t, ev, av, path+"."+k)
+		}
+		return
+
+	case []interface{}:
+		a, ok := actual.([]interface{})
+		if !ok {
+			t.Fatalf("%s: expected array, got %T", path, actual)
+		}
+		if len(a) != len(e) {
+			t.Fatalf("%s: array length mismatch: got %d, expected %d", path, len(a), len(e))
+		}
+		for i := range e {
+			assertSubset(t, e[i], a[i], fmt.Sprintf("%s[%d]", path, i))
+		}
+		return
+
+	case float64:
+		af, ok := actual.(float64)
+		if !ok {
+			t.Fatalf("%s: expected number, got %T", path, actual)
+		}
+		diff := af - e
+		if diff < 0 {
+			diff = -diff
+		}
+		if diff > 0.01 {
+			t.Fatalf("%s: number mismatch: got %.6f, expected %.6f", path, af, e)
+		}
+		return
+
+	default:
+		if expected != actual {
+			t.Fatalf("%s: mismatch: got %#v, expected %#v", path, actual, expected)
+		}
+	}
 }

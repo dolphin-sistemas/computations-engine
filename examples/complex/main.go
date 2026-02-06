@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Exemplo Complexo: Pipeline Completo ===\n")
+	fmt.Println("=== Exemplo Complexo: Pipeline Completo ===")
+	fmt.Println()
 
 	// Criar RulePack complexo com todas as fases
 	rulePack := core.RulePack{
@@ -298,7 +299,7 @@ func main() {
 	}
 
 	// Exibir resultados
-	fmt.Println("✅ Execução bem-sucedida!\n")
+	fmt.Println("✅ Execução bem-sucedida!")
 	fmt.Printf("📋 Versão das Regras: %s\n", result.RulesVersion)
 	fmt.Printf("📊 Regras Executadas: %d\n", len(result.Reasons))
 	fmt.Printf("⚠️  Violações: %d\n\n", len(result.Violations))

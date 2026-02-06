@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Exemplos de Tratamento de Erros ===\n")
+	fmt.Println("=== Exemplos de Tratamento de Erros ===")
+	fmt.Println()
 
 	// Exemplo 1: RulePack sem ID
 	fmt.Println("1️⃣  Erro: RulePack sem ID")

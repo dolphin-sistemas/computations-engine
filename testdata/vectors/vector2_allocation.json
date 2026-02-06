@@ -34,9 +34,28 @@
           "name": "allocation",
           "rules": [
             {
-              "id": "allocate-discount",
+              "id": "init-item-total",
               "phase": "allocation",
               "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "items[*].fields.itemTotal",
+                  "logic": {
+                    "*": [
+                      { "var": ["basePrice", 0] },
+                      { "var": ["amount", 0] }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "allocate-discount",
+              "phase": "allocation",
+              "priority": 2,
               "enabled": true,
               "condition": null,
               "actions": [

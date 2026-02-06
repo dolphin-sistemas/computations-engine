@@ -1,5 +1,5 @@
 {
-  "name": "baseline_initialization",
+  "name": "nested_items_negotiations_level2",
   "input": {
     "order": {
       "tenantId": "test-tenant",
@@ -7,43 +7,25 @@
         {
           "id": "item-1",
           "amount": 1,
-          "fields": {
-            "basePrice": 100.0
-          }
+          "basePrice": 100.0,
+          "negotiations": [
+            { "percent": 10.0 },
+            { "percent": 20.0 }
+          ]
         }
       ],
       "fields": {},
       "totals": {}
     },
     "rulePack": {
-      "id": "baseline-test",
+      "id": "nested-items-test",
       "version": "v1.0.0",
       "phases": [
         {
           "name": "baseline",
           "rules": [
             {
-              "id": "init-subtotal",
-              "phase": "baseline",
-              "priority": 2,
-              "enabled": true,
-              "condition": null,
-              "actions": [
-                {
-                  "type": "compute",
-                  "target": "totals.subtotal",
-                  "logic": {
-                    "sum": [
-                      {
-                        "var": ["itemValues", []]
-                      }
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "id": "init-item-total",
+              "id": "compute-negotiation-amount",
               "phase": "baseline",
               "priority": 1,
               "enabled": true,
@@ -51,11 +33,16 @@
               "actions": [
                 {
                   "type": "compute",
-                  "target": "items[*].fields.itemTotal",
+                  "target": "items[*].negotiations[*].amount",
                   "logic": {
                     "*": [
                       { "var": ["basePrice", 0] },
-                      { "var": ["amount", 0] }
+                      {
+                        "/": [
+                          { "var": ["percent", 0] },
+                          100
+                        ]
+                      }
                     ]
                   }
                 }
@@ -64,17 +51,22 @@
           ]
         }
       ]
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
     }
   },
   "expected": {
     "stateFragment": {
-      "totals": {
-        "subtotal": 100.0
-      },
       "items": [
         {
           "fields": {
-            "itemTotal": 100.0
+            "negotiations": [
+              { "amount": 10.0 },
+              { "amount": 20.0 }
+            ]
           }
         }
       ]
@@ -83,3 +75,4 @@
     "violations": []
   }
 }
+

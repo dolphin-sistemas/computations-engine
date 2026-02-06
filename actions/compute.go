@@ -2,13 +2,13 @@ package actions
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/dolphin-sistemas/computations-engine/core"
 	"github.com/dolphin-sistemas/computations-engine/operators"
 )
 
-// ExecuteComputeAction executa ação "compute": calcula usando JsonLogic e define em target
+// ExecuteComputeAction executa aÃ§Ã£o "compute": calcula usando JsonLogic e define em target.
+// Supports nested paths: items[*].x, items[*].negotiations[*].percent, items[*].foo[*].bar[*].baz, etc.
 func ExecuteComputeAction(ctx *core.EngineContext, action core.Action, evalData map[string]interface{}) (*core.Reason, *core.Violation, error) {
 	if action.Target == "" {
 		return nil, nil, fmt.Errorf("compute action requires target")
@@ -18,75 +18,74 @@ func ExecuteComputeAction(ctx *core.EngineContext, action core.Action, evalData 
 		return nil, nil, fmt.Errorf("compute action requires logic")
 	}
 
-	// Se o target é items[*].fields.x, processar cada item individualmente
-	if strings.HasPrefix(action.Target, "items[*].") {
-		return executeComputeActionForAllItems(ctx, action, evalData)
+	steps, err := ParsePath(action.Target)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Avaliar JsonLogic uma vez para targets não-iterativos
+	if HasWildcard(steps) {
+		return executeComputeActionIterative(ctx, action, evalData, steps)
+	}
+
+	// Non-iterative: evaluate once and set
 	result, err := operators.EvaluateJsonLogic(action.Logic, evalData)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to evaluate compute logic: %w", err)
 	}
-
-	// Aplicar no target
 	if err := SetValue(ctx.State, action.Target, result); err != nil {
 		return nil, nil, err
 	}
-
 	return &core.Reason{Message: fmt.Sprintf("computed %s = %v", action.Target, result)}, nil, nil
 }
 
-// executeComputeActionForAllItems executa compute action para cada item individualmente
-func executeComputeActionForAllItems(ctx *core.EngineContext, action core.Action, evalData map[string]interface{}) (*core.Reason, *core.Violation, error) {
-	// Extrair o nome do campo: items[*].fields.x -> x
-	parts := strings.Split(action.Target, ".")
-	if len(parts) != 3 || !strings.HasPrefix(parts[0], "items[") || !strings.HasSuffix(parts[0], "]") || parts[1] != "fields" {
-		return nil, nil, fmt.Errorf("invalid items[*] target format: %s", action.Target)
-	}
-
-	// Verificar se é items[*] e extrair o campo
-	itemsPart := parts[0] // "items[*]"
-	if itemsPart != "items[*]" {
-		return nil, nil, fmt.Errorf("invalid items[*] target format: %s (expected items[*], got %s)", action.Target, itemsPart)
-	}
-
-	fieldName := parts[2] // "x"
-
-	// Para cada item, criar contexto específico e avaliar
-	for i := range ctx.State.Items {
-		// Criar contexto de avaliação para este item específico
-		itemEvalData := make(map[string]interface{})
-
-		// Copiar dados globais (context, fields do estado, totals)
-		for k, v := range evalData {
-			if k != "items" && k != "itemValues" {
-				itemEvalData[k] = v
-			}
-		}
-
-		// Adicionar dados do item atual ao contexto
-		item := ctx.State.Items[i]
-		itemEvalData["id"] = item.ID
-		itemEvalData["amount"] = item.Amount
-
-		// Adicionar todos os campos do item diretamente no contexto
-		for k, v := range item.Fields {
-			itemEvalData[k] = v
-		}
-
-		// Avaliar JsonLogic com contexto deste item
+// executeComputeActionIterative iterates over all wildcard matches and evaluates logic per-element.
+func executeComputeActionIterative(ctx *core.EngineContext, action core.Action, evalData map[string]interface{}, steps []PathStep) (*core.Reason, *core.Violation, error) {
+	count := 0
+	_, err := visitLeaves(ctx.State, steps, true, func(ref leafRef, selections []selectedValue) error {
+		itemEvalData := buildEvalDataForSelections(evalData, selections)
 		result, err := operators.EvaluateJsonLogic(action.Logic, itemEvalData)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to evaluate compute logic for item %d: %w", i, err)
+			return fmt.Errorf("failed to evaluate compute logic: %w", err)
 		}
-
-		// Aplicar resultado no campo do item
-		if ctx.State.Items[i].Fields == nil {
-			ctx.State.Items[i].Fields = make(map[string]interface{})
+		if err := ref.Set(result); err != nil {
+			return err
 		}
-		ctx.State.Items[i].Fields[fieldName] = result
+		count++
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return &core.Reason{Message: fmt.Sprintf("computed %s for %d items", action.Target, len(ctx.State.Items))}, nil, nil
+	if count == 0 {
+		return &core.Reason{Message: fmt.Sprintf("computed %s (no elements)", action.Target)}, nil, nil
+	}
+
+	return &core.Reason{Message: fmt.Sprintf("computed %s for %d elements", action.Target, count)}, nil, nil
+}
+
+func buildEvalDataForSelections(base map[string]interface{}, selections []selectedValue) map[string]interface{} {
+	out := make(map[string]interface{})
+	for k, v := range base {
+		if k != "items" && k != "itemValues" {
+			out[k] = v
+		}
+	}
+
+	for _, sel := range selections {
+		switch v := sel.Value.(type) {
+		case *core.Item:
+			out["id"] = v.ID
+			out["amount"] = v.Amount
+			for k2, v2 := range v.Fields {
+				out[k2] = v2
+			}
+		case map[string]interface{}:
+			for k2, v2 := range v {
+				out[k2] = v2
+			}
+		}
+	}
+
+	return out
 }

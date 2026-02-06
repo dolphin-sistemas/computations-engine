@@ -1,0 +1,90 @@
+{
+  "name": "nested_items_multi_level3",
+  "input": {
+    "order": {
+      "tenantId": "test-tenant",
+      "items": [
+        {
+          "id": "item-1",
+          "amount": 1,
+          "foo": [
+            {
+              "bar": [
+                { "baz": 1.0 },
+                { "baz": 2.0 }
+              ]
+            },
+            {
+              "bar": [
+                { "baz": 3.0 }
+              ]
+            }
+          ]
+        }
+      ],
+      "fields": {},
+      "totals": {}
+    },
+    "rulePack": {
+      "id": "nested-items-test",
+      "version": "v1.0.0",
+      "phases": [
+        {
+          "name": "baseline",
+          "rules": [
+            {
+              "id": "compute-qux",
+              "phase": "baseline",
+              "priority": 1,
+              "enabled": true,
+              "condition": null,
+              "actions": [
+                {
+                  "type": "compute",
+                  "target": "items[*].foo[*].bar[*].qux",
+                  "logic": {
+                    "+": [
+                      { "var": ["baz", 0] },
+                      1
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "context": {
+      "tenantId": "test-tenant",
+      "userId": "user-1",
+      "locale": "pt-BR"
+    }
+  },
+  "expected": {
+    "stateFragment": {
+      "items": [
+        {
+          "fields": {
+            "foo": [
+              {
+                "bar": [
+                  { "qux": 2.0 },
+                  { "qux": 3.0 }
+                ]
+              },
+              {
+                "bar": [
+                  { "qux": 4.0 }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "rulesVersion": "v1.0.0",
+    "violations": []
+  }
+}
+

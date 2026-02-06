@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Exemplo Avançado: Cálculos Complexos e Condicionais ===\n")
+	fmt.Println("=== Exemplo Avançado: Cálculos Complexos e Condicionais ===")
+	fmt.Println()
 
 	// RulePack com cálculos avançados usando operadores customizados
 	rulePack := core.RulePack{
@@ -73,10 +74,10 @@ func main() {
 				Rules: []core.Rule{
 					// Desconto progressivo baseado no valor total
 					{
-						ID:        "progressive-discount",
-						Phase:     "allocation",
-						Priority:  1,
-						Enabled:   true,
+						ID:       "progressive-discount",
+						Phase:    "allocation",
+						Priority: 1,
+						Enabled:  true,
 						Condition: map[string]interface{}{
 							">": []interface{}{
 								map[string]interface{}{"var": []interface{}{"totals.subtotal", 0}},
@@ -121,10 +122,10 @@ func main() {
 					},
 					// Distribuir desconto proporcionalmente entre itens usando allocate
 					{
-						ID:        "allocate-discount",
-						Phase:     "allocation",
-						Priority:  2,
-						Enabled:   true,
+						ID:       "allocate-discount",
+						Phase:    "allocation",
+						Priority: 2,
+						Enabled:  true,
 						Condition: map[string]interface{}{
 							">": []interface{}{
 								map[string]interface{}{"var": []interface{}{"totals.discount", 0}},
@@ -359,7 +360,7 @@ func main() {
 	}
 
 	// Exibir resultados formatados
-	fmt.Println("✅ Execução Completa!\n")
+	fmt.Println("✅ Execução Completa!")
 	fmt.Println("📊 Resumo:")
 	fmt.Printf("  Versão: %s\n", result.RulesVersion)
 	fmt.Printf("  Regras Executadas: %d\n", len(result.Reasons))
